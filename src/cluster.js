@@ -1,0 +1,204 @@
+/** Our cluster implementation */
+
+"use strict";
+
+var is = require('nor-is');
+var $Q = require('q');
+var _cluster = require('cluster');
+var debug = require('nor-debug');
+var HTTP = require('http');
+var OS = require('os');
+var ARRAY = require('nor-array');
+
+var CLUSTER = module.exports = {};
+
+/** Application instances that has been started */
+CLUSTER.apps = [];
+
+/** HTTP instances that has been started */
+CLUSTER.https = [];
+
+/** Returns a promise of express port listen method */
+function listen_port(app, port) {
+	debug.assert(app).is('function');
+	debug.assert(port).is('number');
+	var server = HTTP.createServer(app);
+	var defer = $Q.defer();
+	server.once('error', function(err) {
+		defer.reject(err);
+	});
+	server.listen(port, function(){
+		defer.resolve(server);
+	});
+	return defer.promise;
+}
+
+/** */
+CLUSTER.start_http = function start_http_servers(get_app, port, shared_ports) {
+
+	if(arguments.length >= 3) {
+		shared_ports = is.array(shared_ports) ? shared_ports : [shared_ports];
+	} else {
+		shared_ports = [];
+	}
+
+	return $Q.when(get_app(port)).then(function(app) {
+
+		var ports = [port].concat(shared_ports);
+
+		debug.assert(ports).is('array').minLength(1);
+
+		app.set("worker-port", port);
+		app.set("port", port);
+		app.set("ports", ports);
+		app.set("shared-ports", shared_ports);
+
+		CLUSTER.apps.push(app);
+
+		var https = [];
+
+		return ARRAY(ports).map(function create_step(p) {
+			return function step() {
+				return listen_port(app, p).then(function(http) {
+					debug.assert(http).is('object');
+					https.push(http);
+					CLUSTER.https.push(http);
+				});
+			};
+		}).reduce($Q.when, $Q()).then(function() {
+
+			//debug.log('https = ', https);
+
+			debug.assert(https).is('array').minLength(1);
+
+			app.set('http-servers', https);
+
+			debug.info('HTTP server listening on port(s): ' + ports.join(' ') + ' with worker port as ', port);
+
+			return app;
+		});
+	});
+};
+
+/** Returns a promise of started cluster node */
+CLUSTER.start_node = function cluster_start_node(env) {
+	var defer = $Q.defer();
+	_cluster.once('error', function(err) {
+		defer.reject(err);
+	});
+	//debug.log('forking a cluster node...');
+	if(arguments.length >= 1) {
+		_cluster.fork(env);
+	} else {
+		_cluster.fork();
+	}
+	_cluster.once('online', function() {
+		//debug.log('...cluster node online!');
+		defer.resolve();
+	});
+	return defer.promise;
+};
+
+/** Initialize config object for cluster configurations */
+CLUSTER.initConfig = function cluster_init_config(config) {
+	if(config.cluster) {
+
+		if(config.cluster === true) {
+			config.cluster = {};
+		}
+
+		if(config.cluster.shared) {
+			config.cluster.shared = is.array(config.cluster.shared) ? config.cluster.shared : [config.cluster.shared];
+		} else {
+			config.cluster.shared = [config.port];
+		}
+
+		if(config.cluster.workers) {
+			config.cluster.workers = is.array(config.cluster.workers) ? config.cluster.workers : [config.cluster.workers];
+		} else {
+			config.cluster.workers = [ config.cluster.shared[config.cluster.shared.length-1] + 1 ];
+		}
+
+	} else {
+		config.cluster = null;
+	}
+};
+
+/** Start clusters
+ * @returns {Function} The Express application which was started, otherwise undefined which means it was the master process.
+ */
+CLUSTER.start = function cluster_start_all(get_app, config) {
+
+	CLUSTER.initConfig(config);
+
+	debug.assert(config).is('object');
+	debug.assert(config.cluster).is('object');
+	debug.assert(config.cluster.workers).is('array').minLength(1);
+
+	debug.log('config.cluster = ', config.cluster);
+
+	var workers = ARRAY([].concat(config.cluster.workers)).map(function(n) {
+		return parseInt(n, 10);
+	}).valueOf();
+
+	debug.log('workers = ', workers);
+
+	var port;
+
+	if (_cluster.isWorker) {
+		port = parseInt(process.env.WORKER_PORT, 10);
+		debug.assert(port).is('number');
+		debug.log('Starting HTTP at port ', port);
+		return $Q.when(CLUSTER.start_http(get_app, port, config.cluster.shared)).then(function(app) {
+			return app;
+		});
+	}
+
+	var numCPUs = OS.cpus().length;
+	var cpus = [];
+	var i = 0;
+	for (i = 0; i < numCPUs; i += 1) {
+		cpus.push(i);
+	}
+
+	debug.log('cpus = ', cpus);
+
+	//debug.log('cpus = ', cpus);
+	debug.assert(cpus).is('array').minLength(1);
+
+	var worker_ports = ARRAY(cpus).map(function() {
+		var p = workers.shift();
+
+		if(is.number(p)) {
+			port = p;
+			return p;
+		}
+
+		if(!port) {
+			throw new TypeError("no port for first worker detected!");
+		}
+
+		port = port+1;
+		return port;
+	}).valueOf();
+
+	debug.log('worker_ports = ', worker_ports);
+	debug.assert(worker_ports).is('array').minLength(1);
+
+	_cluster.on('exit', function(worker/*, code, signal*/) {
+		debug.error('worker ' + worker.process.pid + ' died');
+	});
+
+	return ARRAY(worker_ports).map(function(port) {
+		debug.assert(port).is('integer');
+
+		debug.log('Starting a worker to port ', port);
+		return CLUSTER.start_node({
+			'WORKER_PORT': port
+		});
+	}).reduce($Q.when, $Q()).then(function() {
+		return;
+	});
+};
+
+/* EOF */

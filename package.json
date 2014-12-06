@@ -1,0 +1,36 @@
+{
+  "name": "nor-backend",
+  "version": "0.1.0",
+  "description": "Core modules for Sendanor Web Apps",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sendanor/nor-backend.git"
+  },
+  "keywords": [
+    "web",
+    "express",
+    "backend",
+    "http"
+  ],
+  "author": "Jaakko-Heikki Heusala <jheusala@iki.fi>",
+  "license": "MIT",
+  "dependencies": {
+    "nor-newrelic"         : ">= 0.2.6   < 0.3.0",
+    "nor-debug"            : ">= 0.1.45  < 0.2.0",
+    "nor-array"            : ">= 0.1.5  < 0.2.0",
+    "nor-is"               : ">= 0.1.15  < 0.2.0",
+    "nor-nopg"             : ">= 0.1.95  < 0.2.0",
+    "bytes"                : ">= 1.0.0  < 1.1.0",
+    "express"              : "3.4.8",
+    "ejs"                  : ">= 0.8.8   < 0.9.0",
+    "q"                    : ">= 1.0.1   < 1.1.0"
+  },
+  "bugs": {
+    "url": "https://github.com/sendanor/nor-backend/issues"
+  },
+  "homepage": "https://github.com/sendanor/nor-backend"
+}
