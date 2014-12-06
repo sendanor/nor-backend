@@ -37,23 +37,23 @@ module.exports = function core(app) {
 	return $Q.fcall(function init_if_master() {
 
 		if(!config.cluster) {
-			debug.log('Going to call app.init() for single process');
+			//debug.log('Going to call app.init() for single process');
 			return app.init();
 		}
 
 		if(cluster && cluster.isMaster) {
-			debug.log('Going to call app.init() in master process');
+			//debug.log('Going to call app.init() in master process');
 			return app.init();
 		}
 
 	}).then(function start_servers() {
 
 		if(!config.cluster) {
-			debug.log('Starting single HTTP...');
+			//debug.log('Starting single HTTP...');
 			return CLUSTER.start_http(app.get, config.port);
 		}
 
-		debug.log('Starting cluster HTTP...');
+		//debug.log('Starting cluster HTTP...');
 		return CLUSTER.start(app.get, config).then(function(a) {
 			if(a) {
 				debug.info('Cluster node started.');
@@ -65,10 +65,10 @@ module.exports = function core(app) {
 
 	}).then(function after_start_servers(a) {
 		if(a) {
-			debug.log('Calling app.post() in child...');
+			//debug.log('Calling app.post() in child...');
 			return app.post(a);
 		} else {
-			debug.log('Master node done.');
+			//debug.log('Master node done.');
 		}
 	});
 };

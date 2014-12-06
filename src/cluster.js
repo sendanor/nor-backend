@@ -36,6 +36,10 @@ function listen_port(app, port) {
 /** */
 CLUSTER.start_http = function start_http_servers(get_app, port, shared_ports) {
 
+	if(!process.env.WORKER_PORT) {
+		process.env.WORKER_PORT = port;
+	}
+
 	if(arguments.length >= 3) {
 		shared_ports = is.array(shared_ports) ? shared_ports : [shared_ports];
 	} else {
@@ -135,20 +139,20 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	debug.assert(config.cluster).is('object');
 	debug.assert(config.cluster.workers).is('array').minLength(1);
 
-	debug.log('config.cluster = ', config.cluster);
+	//debug.log('config.cluster = ', config.cluster);
 
 	var workers = ARRAY([].concat(config.cluster.workers)).map(function(n) {
 		return parseInt(n, 10);
 	}).valueOf();
 
-	debug.log('workers = ', workers);
+	//debug.log('workers = ', workers);
 
 	var port;
 
 	if (_cluster.isWorker) {
 		port = parseInt(process.env.WORKER_PORT, 10);
 		debug.assert(port).is('number');
-		debug.log('Starting HTTP at port ', port);
+		//debug.log('Starting HTTP at port ', port);
 		return $Q.when(CLUSTER.start_http(get_app, port, config.cluster.shared)).then(function(app) {
 			return app;
 		});
@@ -160,8 +164,6 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	for (i = 0; i < numCPUs; i += 1) {
 		cpus.push(i);
 	}
-
-	debug.log('cpus = ', cpus);
 
 	//debug.log('cpus = ', cpus);
 	debug.assert(cpus).is('array').minLength(1);
@@ -182,7 +184,7 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		return port;
 	}).valueOf();
 
-	debug.log('worker_ports = ', worker_ports);
+	//debug.log('worker_ports = ', worker_ports);
 	debug.assert(worker_ports).is('array').minLength(1);
 
 	_cluster.on('exit', function(worker/*, code, signal*/) {
@@ -192,7 +194,7 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	return ARRAY(worker_ports).map(function(port) {
 		debug.assert(port).is('integer');
 
-		debug.log('Starting a worker to port ', port);
+		//debug.log('Starting a worker to port ', port);
 		return CLUSTER.start_node({
 			'WORKER_PORT': port
 		});
