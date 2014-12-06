@@ -2,8 +2,7 @@
 
 module.exports = {
 	"cluster"               : require("./cluster.js"),
-	"core"                  : require("./core.js"),
-	"log-format-clusterdev" : require("./log-format-clusterdev.js")
+	"core"                  : require("./core.js")
 };
 
 /* EOF */

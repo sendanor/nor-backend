@@ -17,7 +17,6 @@ process.env.PROJECT_ROOT = project_root_path;
 
 require('ejs'); // This must be defined even if not used, since it registers require handler for .ejs files
 
-var express = require('express');
 var NoPg = require('nor-nopg');
 
 if(process.env.ENABLE_NOPG_DEBUG) {
@@ -25,7 +24,7 @@ if(process.env.ENABLE_NOPG_DEBUG) {
 }
 
 var _cluster = require('cluster');
-var log_format_clusterdev = require('./log-format-clusterdev.js');
+//var log_format_clusterdev = require('./log-format-clusterdev.js');
 
 var CLUSTER = require('./cluster.js');
 
@@ -33,9 +32,7 @@ var CLUSTER = require('./cluster.js');
 module.exports = function core(app) {
 
 	var config = app.config;
-
 	var cluster = config.cluster ? _cluster : undefined;
-	express.logger.format('clusterdev', log_format_clusterdev({'cluster':cluster}) );
 
 	return $Q.fcall(function init_if_master() {
 
