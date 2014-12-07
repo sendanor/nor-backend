@@ -2,6 +2,8 @@
 
 "use strict";
 
+var ARRAY = require('nor-array');
+var $Q = require('q');
 var is = require('nor-is');
 var debug = require('nor-debug');
 var NoPg = require('nor-nopg');
@@ -30,8 +32,24 @@ module.exports = function workers(opts) {
 		debug.log('input = ', input);
 
 		var doc;
-		return NoPg.start(opts.pg).searchSingle("Worker")(input).then(function workers_register_get_or_create(db) {
-			doc = db.fetch();
+		return NoPg.start(opts.pg).search("Worker")(input).then(function workers_register_remove_if_necessary(db) {
+			var docs = db.fetch();
+
+			if(docs.length >= 1) {
+				doc = docs.shift();
+			}
+
+			if(docs.length >= 1) {
+				return ARRAY(docs).map(function workers_unregister_duplicate(d) {
+					return function step(db_) {
+						return db_.del(d);
+					};
+				}).reduce($Q.when, $Q(db));
+			}
+
+			return db;
+		}).then(function workers_register_get_or_create(db) {
+
 			if(doc) {
 				debug.log('Worker found: ', doc);
 				return db;
