@@ -10,6 +10,8 @@ var HTTP = require('http');
 var OS = require('os');
 var ARRAY = require('nor-array');
 
+var WORKERS = require('./workers.js');
+
 var CLUSTER = module.exports = {};
 
 /** Application instances that has been started */
@@ -87,18 +89,19 @@ CLUSTER.start_http = function start_http_servers(get_app, port, shared_ports) {
 /** Returns a promise of started cluster node */
 CLUSTER.start_node = function cluster_start_node(env) {
 	var defer = $Q.defer();
+	var worker;
 	_cluster.once('error', function(err) {
 		defer.reject(err);
 	});
 	//debug.log('forking a cluster node...');
 	if(arguments.length >= 1) {
-		_cluster.fork(env);
+		worker = _cluster.fork(env);
 	} else {
-		_cluster.fork();
+		worker = _cluster.fork();
 	}
 	_cluster.once('online', function() {
 		//debug.log('...cluster node online!');
-		defer.resolve();
+		defer.resolve(worker);
 	});
 	return defer.promise;
 };
@@ -140,6 +143,10 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	debug.assert(config.cluster.workers).is('array').minLength(1);
 
 	//debug.log('config.cluster = ', config.cluster);
+
+	var hostname = config.hostname || process.env.HOSTNAME || OS.hostname() || 'localhost';
+
+	var db_workers = WORKERS({'pg':config.pg});
 
 	var workers = ARRAY([].concat(config.cluster.workers)).map(function(n) {
 		return parseInt(n, 10);
@@ -197,6 +204,17 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		//debug.log('Starting a worker to port ', port);
 		return CLUSTER.start_node({
 			'WORKER_PORT': port
+		}).then(function(worker) {
+
+			worker.on('exit', function worker_on_exit() {
+				debug.log('Unregistering worker ' + hostname + ':' + port + '...');
+				db_workers.unregister(hostname, port).fail(function(err) {
+					debug.error(err);
+				}).done();
+			});
+
+			debug.log('Registering worker ' + hostname + ':' + port + '...');
+			return db_workers.register(hostname, port);
 		});
 	}).reduce($Q.when, $Q()).then(function() {
 		return;
