@@ -108,6 +108,17 @@ module.exports = function workers(opts) {
 		});
 	};
 
+	/** Get list of all workers registered at the moment */
+	workers.fetch = function workers_fetch(id) {
+		debug.assert(id).is('uuid');
+		return NoPg.start(opts.pg).searchSingle("Worker")({'$id': id}).commit().then(function workers_fetch(db) {
+			var doc = db.fetch();
+			debug.assert(doc).is('object');
+			debug.assert(doc.$id).equals(id);
+			return doc;
+		});
+	};
+
 	// Export
 	return workers;
 };

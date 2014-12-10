@@ -2,7 +2,8 @@
 
 module.exports = {
 	"cluster"               : require("./cluster.js"),
-	"core"                  : require("./core.js")
+	"core"                  : require("./core.js"),
+	"workers"                  : require("./workers.js")
 };
 
 /* EOF */
