@@ -30,7 +30,7 @@ module.exports = function workers(opts) {
 			throw new TypeError("Unknown arguments for workers_register");
 		}
 
-		debug.log('input = ', input);
+		//debug.log('input = ', input);
 
 		var doc;
 		return $Q(NoPg.start(opts.pg).search("Worker")(input).then(function workers_register_remove_if_necessary(db) {
@@ -54,7 +54,7 @@ module.exports = function workers(opts) {
 		}).then(function workers_register_get_or_create(db) {
 
 			if(doc) {
-				debug.log('Worker found: ', doc);
+				//debug.log('Worker found: ', doc);
 				return db;
 			}
 
@@ -64,7 +64,7 @@ module.exports = function workers(opts) {
 			}).then(function workers_register_fetch(db) {
 				doc = db.fetch();
 				debug.assert(doc).is('object');
-				debug.log('Created document: ', doc);
+				//debug.log('Created document: ', doc);
 				return db;
 			});
 
@@ -83,7 +83,7 @@ module.exports = function workers(opts) {
 				var docs = db.fetch();
 				debug.assert(docs).is('array');
 				if(docs.length === 0) {
-					debug.log('Nothing to clean from database (no Sockets nor Timers)');
+					//debug.log('Nothing to clean from database (no Sockets nor Timers)');
 					return db;
 				}
 
@@ -123,7 +123,7 @@ module.exports = function workers(opts) {
 			throw new TypeError("Unknown arguments for workers_unregister");
 		}
 
-		debug.log('Unregistering worker: ', where);
+		debug.info('Unregistering worker: ', where);
 
 		return NoPg.start(opts.pg).searchSingle("Worker")(where).then(function workers_unregister_del_if_found(db) {
 			var doc = db.fetch();
