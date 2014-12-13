@@ -127,6 +127,20 @@ CLUSTER.initConfig = function cluster_init_config(config) {
 	}
 };
 
+/** Returns array which is X elements long */
+function get_cpu_count() {
+	return OS.cpus().length;
+}
+
+/** Returns array which is `num` elements long */
+function get_worker_array(num) {
+	var cpus = [];
+	for (var i=0; i < num; i += 1) {
+		cpus.push(i);
+	}
+	return cpus;
+}
+
 /** Start clusters
  * @returns {Function} The Express application which was started, otherwise undefined which means it was the master process.
  */
@@ -137,6 +151,7 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	debug.assert(config).is('object');
 	debug.assert(config.cluster).is('object');
 	debug.assert(config.cluster.workers).is('array').minLength(1);
+	debug.assert(config.cluster.size).ignore(undefined).is('number');
 
 	var hostname = config.hostname || process.env.HOSTNAME || OS.hostname() || 'localhost';
 
@@ -156,16 +171,11 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		});
 	}
 
-	var numCPUs = OS.cpus().length;
-	var cpus = [];
-	var i = 0;
-	for (i = 0; i < numCPUs; i += 1) {
-		cpus.push(i);
-	}
+	var numCPUs = get_cpu_count();
+	var worker_array = get_worker_array(config.cluster.size || numCPUs);
+	debug.assert(worker_array).is('array').minLength(1);
 
-	debug.assert(cpus).is('array').minLength(1);
-
-	var worker_ports = ARRAY(cpus).map(function() {
+	var worker_ports = ARRAY(worker_array).map(function() {
 		var p = workers.shift();
 
 		if(is.number(p)) {
