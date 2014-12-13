@@ -23,9 +23,30 @@ function clusterdev(cluster, tokens, req, res) {
 
 	len = isNaN(len) ? '' : len = ' - ' + bytes(len);
 
+	var cluster_desc = '[';
+
+	if(cluster && cluster.worker) {
+		cluster_desc += 'worker(' + cluster.worker.id + ')';
+	} else {
+		cluster_desc += '';
+	}
+
+	if(process.pid) {
+		cluster_desc += '#' + process.pid;
+	}
+
+	var WORKER_PORT = process.env.WORKER_PORT;
+	var WORKER_HOSTNAME = process.env.WORKER_HOSTNAME;
+
+	if(WORKER_PORT) {
+		cluster_desc += '@' + WORKER_HOSTNAME + ':' + WORKER_PORT;
+	}
+
+	cluster_desc += ']';
+
 	return '\x1b[90m' +
 		'[' + now.toISOString() + '] ' +
-		((cluster && cluster.worker) ? '[worker#' + cluster.worker.id + '] ' : '') +
+		(cluster_desc ? cluster_desc + ' ' : '') +
 		'[' + remote_addr + '] ' +
 		((req && req.id) ? '[' + req.id + '] ' : '') +
 		req.method +

@@ -14,7 +14,8 @@ module.exports = function workers(opts) {
 
 	debug.assert(opts.pg).is('string');
 
-	/** Register worker */
+	/** Register new worker or renew old worker record if it exists. This will also remove Sockets and Timers associated to the UUID.
+	 */
 	workers.register = function workers_register(hostname, port) {
 
 		var input;
@@ -32,7 +33,7 @@ module.exports = function workers(opts) {
 		debug.log('input = ', input);
 
 		var doc;
-		return NoPg.start(opts.pg).search("Worker")(input).then(function workers_register_remove_if_necessary(db) {
+		return $Q(NoPg.start(opts.pg).search("Worker")(input).then(function workers_register_remove_if_necessary(db) {
 			var docs = db.fetch();
 
 			if(docs.length >= 1) {
@@ -40,6 +41,7 @@ module.exports = function workers(opts) {
 			}
 
 			if(docs.length >= 1) {
+				//debug.log('here');
 				return ARRAY(docs).map(function workers_unregister_duplicate(d) {
 					return function step(db_) {
 						return db_.del(d);
@@ -47,6 +49,7 @@ module.exports = function workers(opts) {
 				}).reduce($Q.when, $Q(db));
 			}
 
+			//debug.log('here');
 			return db;
 		}).then(function workers_register_get_or_create(db) {
 
@@ -65,9 +68,40 @@ module.exports = function workers(opts) {
 				return db;
 			});
 
-		}).commit().then(function workers_register_return() {
+		}).then(function workers_register_return(db) {
+
+			// Remove Sockets and Timers which were registered to doc.$id
+			return db.search()(['OR',
+			  {
+				'$type': 'Socket',
+				'worker': doc.$id,
+			  },
+			  {
+				'$type': 'Timer',
+				'worker': doc.$id,
+			  }]).then(function remove_sockets_timers(db) {
+				var docs = db.fetch();
+				debug.assert(docs).is('array');
+				if(docs.length === 0) {
+					debug.log('Nothing to clean from database (no Sockets nor Timers)');
+					return db;
+				}
+
+				debug.info('Going to delete ' + docs.length + ' resource(s) for worker#' + doc.$id + '...');
+
+				return ARRAY(docs).map(function step_builder(d_doc) {
+					return function step(d) {
+						return d.del(d_doc);
+					};
+				}).reduce($Q.when, $Q(db));
+			});
+
+		}).then(function(db) {
+			return db.commit();
+		}).then(function() {
+			//debug.log('here');
 			return doc;
-		});
+		}));
 	};
 
 	/** Unregister worker */

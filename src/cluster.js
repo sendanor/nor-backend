@@ -73,8 +73,6 @@ CLUSTER.start_http = function start_http_servers(get_app, port, shared_ports) {
 			};
 		}).reduce($Q.when, $Q()).then(function() {
 
-			//debug.log('https = ', https);
-
 			debug.assert(https).is('array').minLength(1);
 
 			app.set('http-servers', https);
@@ -93,14 +91,12 @@ CLUSTER.start_node = function cluster_start_node(env) {
 	_cluster.once('error', function(err) {
 		defer.reject(err);
 	});
-	//debug.log('forking a cluster node...');
 	if(arguments.length >= 1) {
 		worker = _cluster.fork(env);
 	} else {
 		worker = _cluster.fork();
 	}
 	_cluster.once('online', function() {
-		//debug.log('...cluster node online!');
 		defer.resolve(worker);
 	});
 	return defer.promise;
@@ -142,8 +138,6 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	debug.assert(config.cluster).is('object');
 	debug.assert(config.cluster.workers).is('array').minLength(1);
 
-	//debug.log('config.cluster = ', config.cluster);
-
 	var hostname = config.hostname || process.env.HOSTNAME || OS.hostname() || 'localhost';
 
 	var db_workers = WORKERS({'pg':config.pg});
@@ -152,14 +146,11 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		return parseInt(n, 10);
 	}).valueOf();
 
-	//debug.log('workers = ', workers);
-
 	var port;
 
 	if (_cluster.isWorker) {
 		port = parseInt(process.env.WORKER_PORT, 10);
 		debug.assert(port).is('number');
-		//debug.log('Starting HTTP at port ', port);
 		return $Q.when(CLUSTER.start_http(get_app, port, config.cluster.shared)).then(function(app) {
 			return app;
 		});
@@ -172,7 +163,6 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		cpus.push(i);
 	}
 
-	//debug.log('cpus = ', cpus);
 	debug.assert(cpus).is('array').minLength(1);
 
 	var worker_ports = ARRAY(cpus).map(function() {
@@ -191,7 +181,6 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 		return port;
 	}).valueOf();
 
-	//debug.log('worker_ports = ', worker_ports);
 	debug.assert(worker_ports).is('array').minLength(1);
 
 	_cluster.on('exit', function(worker/*, code, signal*/) {
@@ -201,10 +190,9 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	return ARRAY(worker_ports).map(function(port) {
 		debug.assert(port).is('integer');
 
-		debug.log('Registering worker ' + hostname + ':' + port + '...');
 		return db_workers.register(hostname, port).then(function(worker_obj) {
+			debug.info('Registered worker ' + hostname + ':' + port + ' as ' + worker_obj.$id + '...');
 
-			//debug.log('Starting a worker to port ', port);
 			return CLUSTER.start_node({
 				'WORKER_HOSTNAME': hostname,
 				'WORKER_PORT': port,
@@ -212,7 +200,7 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 			}).then(function(worker) {
 
 				worker.on('exit', function worker_on_exit() {
-					debug.log('Unregistering worker ' + hostname + ':' + port + '...');
+					debug.info('Unregistering worker ' + hostname + ':' + port + '...');
 					db_workers.unregister(hostname, port).fail(function(err) {
 						debug.error(err);
 					}).done();
