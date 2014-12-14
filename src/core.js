@@ -3,6 +3,13 @@
 /* NewRelic Setup */
 require('nor-newrelic').init();
 
+var _cluster = require('cluster');
+
+// Setup worker debug port if defined
+if(_cluster.isWorker && process.env.WORKER_DEBUG_PORT) {
+	process._debugPort = process.env.WORKER_DEBUG_PORT;
+}
+
 // Assert that we are not bundling this file to browserify
 var debug = require('nor-debug');
 debug.assert(process.browser).is('undefined');
@@ -36,7 +43,6 @@ if(process.env.ENABLE_NOPG_DEBUG) {
 	NoPg.debug = true;
 }
 
-var _cluster = require('cluster');
 //var log_format_clusterdev = require('./log-format-clusterdev.js');
 
 var CLUSTER = require('./cluster.js');

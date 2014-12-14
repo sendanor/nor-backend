@@ -84,6 +84,42 @@ CLUSTER.start_http = function start_http_servers(get_app, port, shared_ports) {
 	});
 };
 
+function is_argument(arg) {
+	return function is_argument_(s) {
+		return (s === arg) || (s.substr(0, arg.length+1) === arg+'=');
+	};
+}
+
+function not_argument(arg) {
+	var f = is_argument(arg);
+	return function not_argument_(s) {
+		return !f(s);
+	};
+}
+
+function and(a, b) {
+	return function and_(s) {
+		return a(s) && b(s);
+	};
+}
+
+function or(a, b) {
+	return function and_(s) {
+		return a(s) && b(s);
+	};
+}
+
+var debug_flag;
+var debug_ports_enabled;
+var debug_ports = 0;
+if(_cluster.isMaster) {
+	debug_flag = process.execArgv.some(is_argument('--debug-brk')) ? '--debug-brk' : '--debug';
+	debug_ports_enabled = process.execArgv.some(is_argument(debug_flag));
+	_cluster.setupMaster({
+		execArgv: process.execArgv.filter( and(not_argument('--debug-brk'), not_argument('--debug')) )
+	});
+}
+
 /** Returns a promise of started cluster node */
 CLUSTER.start_node = function cluster_start_node(env) {
 	var defer = $Q.defer();
@@ -91,11 +127,35 @@ CLUSTER.start_node = function cluster_start_node(env) {
 	_cluster.once('error', function(err) {
 		defer.reject(err);
 	});
+
+	var debug_port;
+	if(debug_ports_enabled) {
+
+		if (env && env.WORKER_DEBUG_PORT) {
+			debug_port = parseInt(env.WORKER_DEBUG_PORT, 10);
+		} else {
+			debug_port = 5859 + debug_ports;
+			debug_ports += 1;
+			if(!env) {
+				env = {};
+			}
+			env.WORKER_DEBUG_PORT = debug_port;
+		}
+
+		debug.info('Setting cluster worker debug port as ' + debug_port);
+		_cluster.settings.execArgv.push(debug_flag + '=' + debug_port);
+	}
+
 	if(arguments.length >= 1) {
 		worker = _cluster.fork(env);
 	} else {
 		worker = _cluster.fork();
 	}
+
+	if (debug_ports_enabled) {
+		_cluster.settings.execArgv.pop();
+	}
+
 	_cluster.once('online', function() {
 		defer.resolve(worker);
 	});
