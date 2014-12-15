@@ -61,6 +61,8 @@ module.exports = function core(app) {
 
 		if(cluster && cluster.isMaster) {
 			return app.init();
+		} else if(cluster && cluster.isWorker) {
+			return app.initWorker();
 		}
 
 	}).then(function start_servers() {
