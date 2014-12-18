@@ -55,25 +55,31 @@ module.exports = function core(app) {
 
 	return $Q.fcall(function init_if_master() {
 
-		if(!config.cluster) {
+		if( (!config.cluster) && app.init) {
 			return app.init();
 		}
 
-		if(cluster && cluster.isMaster) {
+		if(app.init && cluster && cluster.isMaster) {
 			return app.init();
-		} else if(cluster && cluster.isWorker) {
+		} else if(app.initWorker && cluster && cluster.isWorker) {
 			return app.initWorker();
 		}
 
 	}).then(function start_servers() {
 
+		if(!app.get) {
+			return;
+		}
+
 		if(!config.cluster) {
+			//debug.log('here');
 			return CLUSTER.start_http(app.get, config.port).then(function(a) {
 				debug.info('Single node started.');
 				return a;
 			});
 		}
 
+		//debug.log('config.cluster = ', config.cluster);
 		return CLUSTER.start(app.get, config).then(function(a) {
 			if(a) {
 				debug.info('Cluster node started.');
@@ -84,7 +90,7 @@ module.exports = function core(app) {
 		});
 
 	}).then(function after_start_servers(a) {
-		if(a) {
+		if(a && app.post) {
 			return app.post(a);
 		}
 	});

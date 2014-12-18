@@ -1,5 +1,6 @@
 "use strict";
 
+var FUNCTION = require('nor-function');
 var debug = require('nor-debug');
 var bytes = require('bytes');
 
@@ -70,7 +71,7 @@ function try_wrapper(cluster, tokens, req, res) {
 /** The module builder */
 module.exports = function clusterdev_format(opts) {
 	opts = opts || {};
-	return try_wrapper.bind(undefined, opts.cluster);
+	return FUNCTION(try_wrapper).curry(opts.cluster);
 };
 
 /* EOF */

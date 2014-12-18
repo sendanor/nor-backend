@@ -2,6 +2,7 @@
 
 "use strict";
 
+var debug = require('nor-debug');
 var is = require('nor-is');
 var $Q = require('q');
 var _cluster = require('cluster');
@@ -103,11 +104,11 @@ function and(a, b) {
 	};
 }
 
-function or(a, b) {
+/*function or(a, b) {
 	return function and_(s) {
 		return a(s) && b(s);
 	};
-}
+}*/
 
 var debug_flag;
 var debug_ports_enabled;
@@ -171,20 +172,24 @@ CLUSTER.initConfig = function cluster_init_config(config) {
 		}
 
 		if(config.cluster.shared) {
-			config.cluster.shared = is.array(config.cluster.shared) ? config.cluster.shared : [config.cluster.shared];
+			config.cluster.shared = is.array(config.cluster.shared) ? [].concat(config.cluster.shared) : [config.cluster.shared];
 		} else {
-			config.cluster.shared = [config.port];
+			config.cluster.shared = is.array(config.port) ? [].concat(config.port) : [config.port];
 		}
 
 		if(config.cluster.workers) {
-			config.cluster.workers = is.array(config.cluster.workers) ? config.cluster.workers : [config.cluster.workers];
-		} else {
+			config.cluster.workers = is.array(config.cluster.workers) ? [].concat(config.cluster.workers) : [config.cluster.workers];
+		} else if(config.cluster.shared.length >= 1) {
 			config.cluster.workers = [ config.cluster.shared[config.cluster.shared.length-1] + 1 ];
+		} else {
+			config.cluster.workers = [];
 		}
 
 	} else {
 		config.cluster = null;
 	}
+
+	//debug.log('config.cluster = ', config.cluster);
 };
 
 /** Returns array which is X elements long */
@@ -252,6 +257,8 @@ CLUSTER.start = function cluster_start_all(get_app, config) {
 	}).valueOf();
 
 	debug.assert(worker_ports).is('array').minLength(1);
+
+	//debug.log('worker_ports = ', worker_ports);
 
 	_cluster.on('exit', function(worker/*, code, signal*/) {
 		debug.error('worker ' + worker.process.pid + ' died');
