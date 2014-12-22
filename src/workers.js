@@ -142,11 +142,17 @@ module.exports = function workers(opts) {
 		});
 	};
 
-	/** Get list of all workers registered at the moment */
+	/** Fetch the record for this worker
+	 * @params id {uuid} The UUID of the worker
+	 * @returns {object|undefined} The database record for this worker and `undefined` if not found
+	 */
 	workers.fetch = function workers_fetch(id) {
 		debug.assert(id).is('uuid');
 		return NoPg.start(opts.pg).searchSingle("Worker")({'$id': id}).commit().then(function workers_fetch(db) {
 			var doc = db.fetch();
+			if(doc === undefined) {
+				return;
+			}
 			debug.assert(doc).is('object');
 			debug.assert(doc.$id).equals(id);
 			return doc;
