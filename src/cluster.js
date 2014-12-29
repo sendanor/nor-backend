@@ -114,10 +114,10 @@ var debug_flag;
 var debug_ports_enabled;
 var debug_ports = 0;
 if(_cluster.isMaster) {
-	debug_flag = process.execArgv.some(is_argument('--debug-brk')) ? '--debug-brk' : '--debug';
-	debug_ports_enabled = process.execArgv.some(is_argument(debug_flag));
+	debug_flag = ARRAY(process.execArgv).some(is_argument('--debug-brk')) ? '--debug-brk' : '--debug';
+	debug_ports_enabled = ARRAY(process.execArgv).some(is_argument(debug_flag));
 	_cluster.setupMaster({
-		execArgv: process.execArgv.filter( and(not_argument('--debug-brk'), not_argument('--debug')) )
+		execArgv: ARRAY(process.execArgv).filter( and(not_argument('--debug-brk'), not_argument('--debug')) ).valueOf()
 	});
 }
 
