@@ -39,9 +39,9 @@ require('ejs'); // This must be defined even if not used, since it registers req
 
 var NoPg = require('nor-nopg');
 
-if(process.env.ENABLE_NOPG_DEBUG) {
-	NoPg.debug = true;
-}
+//if(process.env.ENABLE_NOPG_DEBUG) {
+//	NoPg.debug = true;
+//}
 
 //var log_format_clusterdev = require('./log-format-clusterdev.js');
 
